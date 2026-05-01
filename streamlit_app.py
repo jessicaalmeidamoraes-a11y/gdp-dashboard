@@ -55,10 +55,35 @@ st.markdown("## 📌 Indicadores principais")
 
 c1, c2, c3, c4 = st.columns(4)
 
-c1.metric("Orçado", f"R$ {orcado:,.2f}")
-c2.metric("Realizado", f"R$ {realizado:,.2f}")
-c3.metric("Saldo", f"R$ {saldo:,.2f}")
-c4.metric("Total Geral", f"R$ {total:,.2f}")
+def card(titulo, valor):
+    st.markdown(f"""
+    <div style="
+        background-color:#f5f7fa;
+        padding:20px;
+        border-radius:10px;
+        text-align:center;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    ">
+        <div style="font-size:14px; color:gray;">{titulo}</div>
+        <div style="font-size:26px; font-weight:bold;">
+            R$ {valor:,.0f}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+c1, c2, c3, c4 = st.columns(4)
+
+with c1:
+    card("Orçado", orcado)
+
+with c2:
+    card("Realizado", realizado)
+
+with c3:
+    card("Saldo", saldo)
+
+with c4:
+    card("Total Geral", total)
 
 st.divider()
 

@@ -1,42 +1,89 @@
 import streamlit as st
 import pandas as pd
+import altair as alt
 
-st.set_page_config(layout="wide")
+st.set_page_config(
+    page_title="Dashboard Financeiro",
+    layout="wide"
+)
 
-st.title("Dashboard - Gestão Mensal")
+# =========================
+# TOPO CORPORATIVO
+# =========================
+st.markdown("""
+# 📊 Dashboard Financeiro Corporativo
+### Análise de Orçado x Realizado
+""")
 
+st.caption("Fonte: Base financeira | Atualização via GitHub")
+
+st.divider()
+
+# =========================
+# CARREGAR DADOS
+# =========================
 arquivo = "data/seuarquivo.xlsx"
 
 df = pd.read_excel(arquivo)
-
 df.columns = df.columns.str.strip()
 
-# filtros
-st.sidebar.header("Filtros")
+df["Valor"] = pd.to_numeric(df["Valor"], errors="coerce").fillna(0)
+df["Tipo"] = df["Tipo"].astype(str).str.strip()
+
+# =========================
+# FILTROS
+# =========================
+st.sidebar.markdown("## 🎯 Filtros")
 
 for coluna in ["Nome_cc", "Desc_grupo", "Data"]:
-    valores = sorted(df[coluna].dropna().unique())
-    escolha = st.sidebar.multiselect(coluna, valores)
+    if coluna in df.columns:
+        valores = sorted(df[coluna].dropna().unique())
+        escolha = st.sidebar.multiselect(coluna, valores)
 
-    if escolha:
-        df = df[df[coluna].isin(escolha)]
+        if escolha:
+            df = df[df[coluna].isin(escolha)]
 
-# valor numérico
-df["Valor"] = pd.to_numeric(df["Valor"], errors="coerce").fillna(0)
-
+# =========================
 # KPIs
-orcado = df[df["Tipo"].str.strip() == "ORÇADO"]["Valor"].sum()
-realizado = df[df["Tipo"].str.strip() == "REALIZADO"]["Valor"].sum()
+# =========================
+orcado = df[df["Tipo"] == "ORÇADO"]["Valor"].sum()
+realizado = df[df["Tipo"] == "REALIZADO"]["Valor"].sum()
+saldo = orcado + realizado
 total = df["Valor"].sum()
 
-c1, c2, c3 = st.columns(3)
+st.markdown("## 📌 Indicadores principais")
 
-c1.metric("ORÇADO", f"R$ {orcado:,.2f}")
-c2.metric("REALIZADO", f"R$ {realizado:,.2f}")
-c3.metric("TOTAL", f"R$ {total:,.2f}")
+c1, c2, c3, c4 = st.columns(4)
 
-# tabela
-st.subheader("Visão Gerencial")
+c1.metric("Orçado", f"R$ {orcado:,.2f}")
+c2.metric("Realizado", f"R$ {realizado:,.2f}")
+c3.metric("Saldo", f"R$ {saldo:,.2f}")
+c4.metric("Total Geral", f"R$ {total:,.2f}")
+
+st.divider()
+
+# =========================
+# GRÁFICO
+# =========================
+st.markdown("## 📈 Orçado x Realizado")
+
+grafico = df.groupby("Tipo", as_index=False)["Valor"].sum()
+
+chart = alt.Chart(grafico).mark_bar(cornerRadiusTopLeft=6, cornerRadiusTopRight=6).encode(
+    x=alt.X("Tipo:N", title="Tipo"),
+    y=alt.Y("Valor:Q", title="Valor"),
+    color=alt.Color("Tipo:N", legend=None),
+    tooltip=["Tipo", "Valor"]
+)
+
+st.altair_chart(chart, use_container_width=True)
+
+st.divider()
+
+# =========================
+# TABELA GERENCIAL
+# =========================
+st.markdown("## 📋 Visão Gerencial")
 
 pivot = df.pivot_table(
     index=["Tipo", "Area", "Conta", "Nome_conta"],
@@ -44,11 +91,14 @@ pivot = df.pivot_table(
     aggfunc="sum"
 ).reset_index()
 
-st.dataframe(pivot, use_container_width=True)
+st.dataframe(
+    pivot,
+    use_container_width=True,
+    hide_index=True
+)
 
-# gráfico
-st.subheader("Orçado x Realizado")
-
-grafico = df.groupby("Tipo")["Valor"].sum().reset_index()
-
-st.bar_chart(grafico, x="Tipo", y="Valor")
+# =========================
+# BASE DETALHADA
+# =========================
+with st.expander("🔎 Ver base detalhada"):
+    st.dataframe(df, use_container_width=True, hide_index=True)

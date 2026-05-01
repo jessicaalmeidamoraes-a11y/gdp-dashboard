@@ -53,8 +53,6 @@ total = df["Valor"].sum()
 
 st.markdown("## 📌 Indicadores principais")
 
-c1, c2, c3, c4 = st.columns(4)
-
 def card(titulo, valor):
     st.markdown(f"""
     <div style="

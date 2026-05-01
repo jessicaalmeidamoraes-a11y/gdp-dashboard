@@ -5,7 +5,7 @@ st.set_page_config(layout="wide")
 
 st.title("Dashboard - Gestão Mensal")
 
-arquivo = "Dados/seuarquivo.xlsx"
+arquivo = "Data/seuarquivo.xlsx"
 
 df = pd.read_excel(arquivo)
 

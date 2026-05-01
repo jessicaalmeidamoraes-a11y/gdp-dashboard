@@ -5,9 +5,9 @@ st.set_page_config(layout="wide")
 
 st.title("Dashboard - Gestão Mensal")
 
-arquivo = "Data/seuarquivo.xlsx"
+arquivo = "data/gdp_data.csv"
 
-df = pd.read_excel(arquivo)
+df = pd.read_csv(arquivo)
 
 df.columns = df.columns.str.strip()
 

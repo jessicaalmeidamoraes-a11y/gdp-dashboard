@@ -69,7 +69,7 @@ def card(titulo, valor, cor):
         <div style="font-size:14px; opacity:0.85; margin-bottom:8px;">
             {titulo}
         </div>
-        <div style="font-size:30px; font-weight:800; white-space:nowrap;">
+        <div style="font-size:30px; font-weight:800; word-wrap: break-word;">
             {moeda(valor)}
         </div>
     </div>

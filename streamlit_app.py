@@ -93,9 +93,16 @@ white-space:normal;
 overflow-wrap:break-word;
         ">
             {valor_formatado}
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+      <div style="
+    font-size:24px;
+    font-weight:800;
+    line-height:1.2;
+    white-space:normal;
+    overflow-wrap:break-word;
+">
+    {moeda(valor)}
+</div>
+        """, unsafe_allow_html=True)
 
 # =========================
 # ALERTA

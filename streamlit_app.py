@@ -7,6 +7,43 @@ st.set_page_config(
     layout="wide"
 )
 
+# =========================
+# CSS
+# =========================
+st.markdown("""
+<style>
+.block-container {
+    padding-top: 2rem;
+}
+
+.kpi-card {
+    padding: 18px;
+    border-radius: 18px;
+    color: white;
+    box-shadow: 0 8px 22px rgba(0,0,0,0.18);
+    border-left: 6px solid rgba(255,255,255,0.6);
+    min-height: 135px;
+}
+
+.kpi-title {
+    font-size: 15px;
+    opacity: 0.88;
+    margin-bottom: 14px;
+}
+
+.kpi-value {
+    font-size: 20px;
+    font-weight: 800;
+    line-height: 1.25;
+    word-break: normal;
+    overflow-wrap: normal;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# =========================
+# TOPO
+# =========================
 st.markdown("""
 # 📊 Dashboard Financeiro Corporativo
 ### Análise de Orçado x Realizado
@@ -15,6 +52,9 @@ st.markdown("""
 st.caption("Fonte: Base financeira | Atualização via GitHub")
 st.divider()
 
+# =========================
+# CARREGAR DADOS
+# =========================
 arquivo = "data/seuarquivo.xlsx"
 
 df = pd.read_excel(arquivo)
@@ -31,24 +71,32 @@ if "Data" in df.columns:
 # =========================
 st.sidebar.markdown("## 🎯 Filtros")
 
-for coluna in ["Nome_cc", "Desc_grupo", "Data"]:
-    if coluna in df.columns:
-        if coluna == "Data":
-            datas = df["Data"].dropna()
-            if not datas.empty:
-                data_inicio = st.sidebar.date_input("Data inicial", datas.min())
-                data_fim = st.sidebar.date_input("Data final", datas.max())
+if "Nome_cc" in df.columns:
+    nome_cc = st.sidebar.multiselect(
+        "Nome_cc",
+        sorted(df["Nome_cc"].dropna().unique())
+    )
+    if nome_cc:
+        df = df[df["Nome_cc"].isin(nome_cc)]
 
-                df = df[
-                    (df["Data"] >= pd.to_datetime(data_inicio)) &
-                    (df["Data"] <= pd.to_datetime(data_fim))
-                ]
-        else:
-            valores = sorted(df[coluna].dropna().unique())
-            escolha = st.sidebar.multiselect(coluna, valores)
+if "Desc_grupo" in df.columns:
+    desc_grupo = st.sidebar.multiselect(
+        "Desc_grupo",
+        sorted(df["Desc_grupo"].dropna().unique())
+    )
+    if desc_grupo:
+        df = df[df["Desc_grupo"].isin(desc_grupo)]
 
-            if escolha:
-                df = df[df[coluna].isin(escolha)]
+if "Data" in df.columns:
+    datas = df["Data"].dropna()
+    if not datas.empty:
+        data_inicio = st.sidebar.date_input("Data inicial", datas.min())
+        data_fim = st.sidebar.date_input("Data final", datas.max())
+
+        df = df[
+            (df["Data"] >= pd.to_datetime(data_inicio)) &
+            (df["Data"] <= pd.to_datetime(data_fim))
+        ]
 
 # =========================
 # CÁLCULOS
@@ -73,32 +121,11 @@ def card(titulo, valor, cor, tipo="moeda"):
     valor_formatado = moeda(valor) if tipo == "moeda" else percentual(valor)
 
     st.markdown(f"""
- <div style="
-    font-size:20px;
-    font-weight:800;
-    line-height:1.25;
-    white-space:normal;
-    overflow-wrap:break-word;
-">
-    {valor_formatado}
-</div>
-        font-size:24px;
-font-weight:800;
-line-height:1.2;
-white-space:normal;
-overflow-wrap:break-word;
-        ">
-            {valor_formatado}
-      <div style="
-    font-size:24px;
-    font-weight:800;
-    line-height:1.2;
-    white-space:normal;
-    overflow-wrap:break-word;
-">
-    {moeda(valor)}
-</div>
-        """, unsafe_allow_html=True)
+    <div class="kpi-card" style="background: linear-gradient(135deg, {cor}, #111827);">
+        <div class="kpi-title">{titulo}</div>
+        <div class="kpi-value">{valor_formatado}</div>
+    </div>
+    """, unsafe_allow_html=True)
 
 # =========================
 # ALERTA
@@ -133,7 +160,7 @@ with c5:
 st.divider()
 
 # =========================
-# GRÁFICO TIPO
+# GRÁFICO ORÇADO X REALIZADO
 # =========================
 st.markdown("## 📈 Orçado x Realizado")
 

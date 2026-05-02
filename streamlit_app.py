@@ -53,18 +53,24 @@ total = df["Valor"].sum()
 
 st.markdown("## 📌 Indicadores principais")
 
-def card(titulo, valor):
+def moeda(valor):
+    return f"R$ {valor:,.0f}".replace(",", ".")
+
+def card(titulo, valor, cor):
     st.markdown(f"""
     <div style="
-        background-color:#f5f7fa;
-        padding:20px;
-        border-radius:10px;
-        text-align:center;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        background: linear-gradient(135deg, {cor}, #111827);
+        padding:22px;
+        border-radius:18px;
+        color:white;
+        box-shadow:0 8px 22px rgba(0,0,0,0.18);
+        border-left:6px solid rgba(255,255,255,0.6);
     ">
-        <div style="font-size:14px; color:gray;">{titulo}</div>
-        <div style="font-size:26px; font-weight:bold;">
-            R$ {valor:,.0f}
+        <div style="font-size:14px; opacity:0.85; margin-bottom:8px;">
+            {titulo}
+        </div>
+        <div style="font-size:30px; font-weight:800; white-space:nowrap;">
+            {moeda(valor)}
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -72,16 +78,16 @@ def card(titulo, valor):
 c1, c2, c3, c4 = st.columns(4)
 
 with c1:
-    card("Orçado", orcado)
+    card("Orçado", orcado, "#2563eb")
 
 with c2:
-    card("Realizado", realizado)
+    card("Realizado", realizado, "#dc2626")
 
 with c3:
-    card("Saldo", saldo)
+    card("Saldo", saldo, "#16a34a" if saldo >= 0 else "#dc2626")
 
 with c4:
-    card("Total Geral", total)
+    card("Total Geral", total, "#374151")
 
 st.divider()
 

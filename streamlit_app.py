@@ -60,20 +60,32 @@ def card(titulo, valor, cor):
     st.markdown(f"""
     <div style="
         background: linear-gradient(135deg, {cor}, #111827);
-        padding:22px;
+        padding:18px;
         border-radius:18px;
         color:white;
         box-shadow:0 8px 22px rgba(0,0,0,0.18);
         border-left:6px solid rgba(255,255,255,0.6);
+        min-height:135px;
     ">
-        <div style="font-size:14px; opacity:0.85; margin-bottom:8px;">
+        <div style="font-size:15px; opacity:0.85; margin-bottom:14px;">
             {titulo}
         </div>
-        <div style="font-size:26px; font-weight:800; word-wrap: break-word;">
+        <div style="
+            font-size:22px;
+            font-weight:800;
+            line-height:1.25;
+            word-break:break-word;
+        ">
             {moeda(valor)}
         </div>
     </div>
     """, unsafe_allow_html=True)
+
+# saldo positivo ou negativo
+saldo = orcado + realizado
+
+# cor do saldo: vermelho se realizado passar do orçado
+cor_saldo = "#dc2626" if abs(realizado) > orcado else "#16a34a"
 
 c1, c2, c3, c4 = st.columns(4)
 
@@ -84,11 +96,10 @@ with c2:
     card("Realizado", realizado, "#dc2626")
 
 with c3:
-    card("Saldo", saldo, "#16a34a" if saldo >= 0 else "#dc2626")
+    card("Saldo", saldo, cor_saldo)
 
 with c4:
     card("Total Geral", total, "#374151")
-
 st.divider()
 
 # =========================

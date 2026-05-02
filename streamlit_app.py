@@ -47,10 +47,7 @@ def percentual(valor):
     return f"{valor:,.1f}%".replace(".", ",")
 
 def card(titulo, valor, cor, tipo="moeda"):
-    if tipo == "moeda":
-        valor_formatado = moeda(valor)
-    else:
-        valor_formatado = percentual(valor)
+    valor_formatado = moeda(valor) if tipo == "moeda" else percentual(valor)
 
     st.markdown(f"""
     <div class="kpi-card" style="background: linear-gradient(135deg, {cor}, #111827);">
@@ -80,56 +77,70 @@ df.columns = df.columns.str.strip()
 
 df["Valor"] = pd.to_numeric(df["Valor"], errors="coerce").fillna(0)
 df["Tipo"] = df["Tipo"].astype(str).str.strip()
-
 df["Valor_grafico"] = df["Valor"].abs()
 
 if "Data" in df.columns:
     df["Data"] = pd.to_datetime(df["Data"], errors="coerce")
 
 # =========================
-# FILTROS
+# FILTROS GLOBAIS
 # =========================
 st.sidebar.markdown("## 🎯 Filtros")
 
-if "Nome_cc" in df.columns:
-    f1 = st.sidebar.multiselect("Nome_cc", sorted(df["Nome_cc"].dropna().unique()))
-    if f1:
-        df = df[df["Nome_cc"].isin(f1)]
+df_filtrado = df.copy()
 
-if "Desc_grupo" in df.columns:
-    f2 = st.sidebar.multiselect("Desc_grupo", sorted(df["Desc_grupo"].dropna().unique()))
-    if f2:
-        df = df[df["Desc_grupo"].isin(f2)]
+if "Nome_cc" in df_filtrado.columns:
+    filtro_nome_cc = st.sidebar.multiselect(
+        "Nome_cc",
+        sorted(df_filtrado["Nome_cc"].dropna().unique())
+    )
 
-if "Data" in df.columns:
-    datas = df["Data"].dropna()
+    if filtro_nome_cc:
+        df_filtrado = df_filtrado[df_filtrado["Nome_cc"].isin(filtro_nome_cc)]
+
+if "Desc_grupo" in df_filtrado.columns:
+    filtro_desc_grupo = st.sidebar.multiselect(
+        "Desc_grupo",
+        sorted(df_filtrado["Desc_grupo"].dropna().unique())
+    )
+
+    if filtro_desc_grupo:
+        df_filtrado = df_filtrado[df_filtrado["Desc_grupo"].isin(filtro_desc_grupo)]
+
+if "Data" in df_filtrado.columns:
+    datas = df_filtrado["Data"].dropna()
+
     if not datas.empty:
-        inicio = st.sidebar.date_input("Data inicial", datas.min())
-        fim = st.sidebar.date_input("Data final", datas.max())
+        data_inicio = st.sidebar.date_input("Data inicial", datas.min())
+        data_fim = st.sidebar.date_input("Data final", datas.max())
 
-        df = df[(df["Data"] >= pd.to_datetime(inicio)) &
-                (df["Data"] <= pd.to_datetime(fim))]
+        df_filtrado = df_filtrado[
+            (df_filtrado["Data"] >= pd.to_datetime(data_inicio)) &
+            (df_filtrado["Data"] <= pd.to_datetime(data_fim))
+        ]
+
+# daqui pra baixo, tudo usa o mesmo filtro
+df_base = df_filtrado.copy()
 
 # =========================
 # KPIs
 # =========================
-orcado = df[df["Tipo"] == "ORÇADO"]["Valor"].sum()
-realizado_real = df[df["Tipo"] == "REALIZADO"]["Valor"].sum()
-realizado = abs(realizado_real)
+orcado = df_base[df_base["Tipo"] == "ORÇADO"]["Valor"].sum()
+realizado_real = df_base[df_base["Tipo"] == "REALIZADO"]["Valor"].sum()
+realizado_visual = abs(realizado_real)
 
 saldo = orcado + realizado_real
-total = df["Valor"].sum()
+total = df_base["Valor"].sum()
 
-execucao = (realizado / orcado * 100) if orcado != 0 else 0
+execucao = (realizado_visual / orcado * 100) if orcado != 0 else 0
 
-cor_saldo = "#dc2626" if realizado > orcado else "#16a34a"
+cor_saldo = "#dc2626" if realizado_visual > orcado else "#16a34a"
 cor_exec = "#dc2626" if execucao > 100 else "#2563eb"
 
-# alerta
-if realizado > orcado:
+if realizado_visual > orcado:
     st.error("⚠️ Realizado maior que o orçado")
 else:
-    st.success("✅ Dentro do orçamento")
+    st.success("✅ O realizado está dentro do orçamento")
 
 st.markdown("## 📌 Indicadores principais")
 
@@ -139,7 +150,7 @@ with c1:
     card("Orçado", orcado, "#2563eb")
 
 with c2:
-    card("Realizado", realizado, "#dc2626")
+    card("Realizado", realizado_visual, "#dc2626")
 
 with c3:
     card("Saldo", saldo, cor_saldo)
@@ -157,96 +168,118 @@ st.divider()
 # =========================
 st.markdown("## 📈 Orçado x Realizado")
 
-grafico = df.groupby("Tipo", as_index=False).agg(
+grafico_tipo = df_base.groupby("Tipo", as_index=False).agg(
     Valor=("Valor", "sum"),
     Valor_grafico=("Valor_grafico", "sum")
 )
 
-grafico["Valor_formatado"] = grafico["Valor"].apply(moeda_tooltip)
+grafico_tipo["Valor_formatado"] = grafico_tipo["Valor"].apply(moeda_tooltip)
 
-chart = alt.Chart(grafico).mark_bar().encode(
-    x="Tipo:N",
-    y="Valor_grafico:Q",
-    color="Tipo:N",
+chart_tipo = alt.Chart(grafico_tipo).mark_bar(
+    cornerRadiusTopLeft=6,
+    cornerRadiusTopRight=6
+).encode(
+    x=alt.X("Tipo:N", title="Tipo"),
+    y=alt.Y("Valor_grafico:Q", title="Valor"),
+    color=alt.Color("Tipo:N", title="Tipo"),
     tooltip=[
-        alt.Tooltip("Tipo:N"),
+        alt.Tooltip("Tipo:N", title="Tipo"),
         alt.Tooltip("Valor_formatado:N", title="Valor")
     ]
 )
 
-st.altair_chart(chart, use_container_width=True)
+st.altair_chart(chart_tipo, use_container_width=True)
 
 # =========================
 # EVOLUÇÃO MENSAL
 # =========================
 st.markdown("## 🗓️ Evolução mensal")
+st.caption("O gráfico mostra os valores mês a mês. Os cards mostram o total acumulado conforme os filtros aplicados.")
 
-if "Data" in df.columns:
-    df["Mes"] = df["Data"].dt.to_period("M").astype(str)
+if "Data" in df_base.columns:
+    df_mes = df_base.dropna(subset=["Data"]).copy()
 
-    mensal = df.groupby(["Mes", "Tipo"], as_index=False).agg(
-        Valor=("Valor", "sum"),
-        Valor_grafico=("Valor_grafico", "sum")
-    )
+    if not df_mes.empty:
+        df_mes["Mes"] = df_mes["Data"].dt.to_period("M").astype(str)
 
-    mensal["Valor_formatado"] = mensal["Valor"].apply(moeda_tooltip)
+        mensal = df_mes.groupby(["Mes", "Tipo"], as_index=False).agg(
+            Valor=("Valor", "sum"),
+            Valor_grafico=("Valor_grafico", "sum")
+        )
 
-    chart2 = alt.Chart(mensal).mark_line(point=True).encode(
-        x="Mes:N",
-        y="Valor_grafico:Q",
-        color="Tipo:N",
-        tooltip=[
-            "Mes",
-            "Tipo",
-            alt.Tooltip("Valor_formatado:N", title="Valor")
-        ]
-    )
+        mensal["Valor_formatado"] = mensal["Valor"].apply(moeda_tooltip)
 
-    st.altair_chart(chart2, use_container_width=True)
+        chart_mes = alt.Chart(mensal).mark_line(point=True).encode(
+            x=alt.X("Mes:N", title="Mês"),
+            y=alt.Y("Valor_grafico:Q", title="Valor"),
+            color=alt.Color("Tipo:N", title="Tipo"),
+            tooltip=[
+                alt.Tooltip("Mes:N", title="Mês"),
+                alt.Tooltip("Tipo:N", title="Tipo"),
+                alt.Tooltip("Valor_formatado:N", title="Valor")
+            ]
+        )
+
+        st.altair_chart(chart_mes, use_container_width=True)
 
 st.divider()
 
 # =========================
-# POR ÁREA
+# VALOR POR ÁREA
 # =========================
-if "Area" in df.columns:
+if "Area" in df_base.columns:
     st.markdown("## 🏢 Valor por Área")
 
-    area = df.groupby("Area", as_index=False).agg(
+    area = df_base.groupby(["Area", "Tipo"], as_index=False).agg(
         Valor=("Valor", "sum"),
         Valor_grafico=("Valor_grafico", "sum")
     )
 
     area["Valor_formatado"] = area["Valor"].apply(moeda_tooltip)
 
-    chart3 = alt.Chart(area).mark_bar().encode(
-        x="Valor_grafico:Q",
-        y=alt.Y("Area:N", sort="-x"),
+    chart_area = alt.Chart(area).mark_bar().encode(
+        x=alt.X("Valor_grafico:Q", title="Valor"),
+        y=alt.Y("Area:N", sort="-x", title="Área"),
+        color=alt.Color("Tipo:N", title="Tipo"),
         tooltip=[
-            "Area",
+            alt.Tooltip("Area:N", title="Área"),
+            alt.Tooltip("Tipo:N", title="Tipo"),
             alt.Tooltip("Valor_formatado:N", title="Valor")
         ]
     )
 
-    st.altair_chart(chart3, use_container_width=True)
+    st.altair_chart(chart_area, use_container_width=True)
 
 st.divider()
 
 # =========================
-# TABELA
+# VISÃO GERENCIAL
 # =========================
 st.markdown("## 📋 Visão Gerencial")
 
-pivot = df.pivot_table(
+pivot = df_base.pivot_table(
     index=["Tipo", "Area", "Conta", "Nome_conta"],
     values="Valor",
     aggfunc="sum"
 ).reset_index()
 
-st.dataframe(pivot, use_container_width=True, hide_index=True)
+pivot["Valor"] = pivot["Valor"].apply(moeda_tooltip)
+
+st.dataframe(
+    pivot,
+    use_container_width=True,
+    hide_index=True
+)
 
 # =========================
-# BASE
+# BASE COMPLETA
 # =========================
 with st.expander("🔎 Base completa"):
-    st.dataframe(df, use_container_width=True, hide_index=True)
+    df_exibir = df_base.copy()
+    df_exibir["Valor"] = df_exibir["Valor"].apply(moeda_tooltip)
+
+    st.dataframe(
+        df_exibir,
+        use_container_width=True,
+        hide_index=True
+    )

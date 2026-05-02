@@ -86,10 +86,11 @@ def card(titulo, valor, cor, tipo="moeda"):
             {titulo}
         </div>
         <div style="
-            font-size:22px;
-            font-weight:800;
-            line-height:1.25;
-            word-break:break-word;
+        font-size:24px;
+font-weight:800;
+line-height:1.2;
+white-space:normal;
+overflow-wrap:break-word;
         ">
             {valor_formatado}
         </div>

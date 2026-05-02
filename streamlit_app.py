@@ -35,8 +35,6 @@ st.markdown("""
     font-size: 20px;
     font-weight: 800;
     line-height: 1.25;
-    word-break: normal;
-    overflow-wrap: normal;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -62,6 +60,9 @@ df.columns = df.columns.str.strip()
 
 df["Valor"] = pd.to_numeric(df["Valor"], errors="coerce").fillna(0)
 df["Tipo"] = df["Tipo"].astype(str).str.strip()
+
+# valor apenas para gráficos, sem alterar a regra financeira
+df["Valor_grafico"] = df["Valor"].abs()
 
 if "Data" in df.columns:
     df["Data"] = pd.to_datetime(df["Data"], errors="coerce")
@@ -102,13 +103,18 @@ if "Data" in df.columns:
 # CÁLCULOS
 # =========================
 orcado = df[df["Tipo"] == "ORÇADO"]["Valor"].sum()
-realizado = df[df["Tipo"] == "REALIZADO"]["Valor"].sum()
-saldo = orcado + realizado
+realizado_real = df[df["Tipo"] == "REALIZADO"]["Valor"].sum()
+realizado_visual = abs(realizado_real)
+
+# saldo respeitando sua regra financeira:
+# se realizado vem negativo na base, orçado + realizado = diferença
+saldo = orcado + realizado_real
+
 total = df["Valor"].sum()
 
-percentual_execucao = (abs(realizado) / orcado * 100) if orcado != 0 else 0
+percentual_execucao = (realizado_visual / orcado * 100) if orcado != 0 else 0
 
-cor_saldo = "#dc2626" if abs(realizado) > orcado else "#16a34a"
+cor_saldo = "#dc2626" if realizado_visual > orcado else "#16a34a"
 cor_execucao = "#dc2626" if percentual_execucao > 100 else "#2563eb"
 
 def moeda(valor):
@@ -130,7 +136,7 @@ def card(titulo, valor, cor, tipo="moeda"):
 # =========================
 # ALERTA
 # =========================
-if abs(realizado) > orcado:
+if realizado_visual > orcado:
     st.error("⚠️ Atenção: o realizado está maior que o orçado.")
 else:
     st.success("✅ O realizado está dentro do orçamento.")
@@ -146,7 +152,7 @@ with c1:
     card("Orçado", orcado, "#2563eb")
 
 with c2:
-    card("Realizado", realizado, "#dc2626")
+    card("Realizado", realizado_visual, "#dc2626")
 
 with c3:
     card("Saldo", saldo, cor_saldo)
@@ -164,16 +170,23 @@ st.divider()
 # =========================
 st.markdown("## 📈 Orçado x Realizado")
 
-grafico_tipo = df.groupby("Tipo", as_index=False)["Valor"].sum()
+grafico_tipo = df.groupby("Tipo", as_index=False).agg(
+    Valor=("Valor", "sum"),
+    Valor_grafico=("Valor_grafico", "sum")
+)
 
 chart_tipo = alt.Chart(grafico_tipo).mark_bar(
     cornerRadiusTopLeft=6,
     cornerRadiusTopRight=6
 ).encode(
     x=alt.X("Tipo:N", title="Tipo"),
-    y=alt.Y("Valor:Q", title="Valor"),
+    y=alt.Y("Valor_grafico:Q", title="Valor"),
     color=alt.Color("Tipo:N", legend=None),
-    tooltip=["Tipo", "Valor"]
+    tooltip=[
+        alt.Tooltip("Tipo:N", title="Tipo"),
+        alt.Tooltip("Valor:Q", title="Valor Real"),
+        alt.Tooltip("Valor_grafico:Q", title="Valor no Gráfico")
+    ]
 )
 
 st.altair_chart(chart_tipo, use_container_width=True)
@@ -187,13 +200,21 @@ with g1:
     st.markdown("## 🏢 Valor por Área")
 
     if "Area" in df.columns:
-        grafico_area = df.groupby("Area", as_index=False)["Valor"].sum()
-        grafico_area = grafico_area.sort_values("Valor", ascending=False)
+        grafico_area = df.groupby("Area", as_index=False).agg(
+            Valor=("Valor", "sum"),
+            Valor_grafico=("Valor_grafico", "sum")
+        )
+
+        grafico_area = grafico_area.sort_values("Valor_grafico", ascending=False)
 
         chart_area = alt.Chart(grafico_area).mark_bar().encode(
-            x=alt.X("Valor:Q", title="Valor"),
+            x=alt.X("Valor_grafico:Q", title="Valor"),
             y=alt.Y("Area:N", sort="-x", title="Área"),
-            tooltip=["Area", "Valor"]
+            tooltip=[
+                alt.Tooltip("Area:N", title="Área"),
+                alt.Tooltip("Valor:Q", title="Valor Real"),
+                alt.Tooltip("Valor_grafico:Q", title="Valor no Gráfico")
+            ]
         )
 
         st.altair_chart(chart_area, use_container_width=True)
@@ -205,13 +226,21 @@ with g2:
         df_mes = df.dropna(subset=["Data"]).copy()
         df_mes["Mes"] = df_mes["Data"].dt.to_period("M").astype(str)
 
-        grafico_mes = df_mes.groupby(["Mes", "Tipo"], as_index=False)["Valor"].sum()
+        grafico_mes = df_mes.groupby(["Mes", "Tipo"], as_index=False).agg(
+            Valor=("Valor", "sum"),
+            Valor_grafico=("Valor_grafico", "sum")
+        )
 
         chart_mes = alt.Chart(grafico_mes).mark_line(point=True).encode(
             x=alt.X("Mes:N", title="Mês"),
-            y=alt.Y("Valor:Q", title="Valor"),
+            y=alt.Y("Valor_grafico:Q", title="Valor"),
             color="Tipo:N",
-            tooltip=["Mes", "Tipo", "Valor"]
+            tooltip=[
+                alt.Tooltip("Mes:N", title="Mês"),
+                alt.Tooltip("Tipo:N", title="Tipo"),
+                alt.Tooltip("Valor:Q", title="Valor Real"),
+                alt.Tooltip("Valor_grafico:Q", title="Valor no Gráfico")
+            ]
         )
 
         st.altair_chart(chart_mes, use_container_width=True)

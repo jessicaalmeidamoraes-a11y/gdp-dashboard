@@ -73,19 +73,15 @@ def card(titulo, valor, cor, tipo="moeda"):
     valor_formatado = moeda(valor) if tipo == "moeda" else percentual(valor)
 
     st.markdown(f"""
-    <div style="
-        background: linear-gradient(135deg, {cor}, #111827);
-        padding:18px;
-        border-radius:18px;
-        color:white;
-        box-shadow:0 8px 22px rgba(0,0,0,0.18);
-        border-left:6px solid rgba(255,255,255,0.6);
-        min-height:135px;
-    ">
-        <div style="font-size:15px; opacity:0.85; margin-bottom:14px;">
-            {titulo}
-        </div>
-        <div style="
+ <div style="
+    font-size:20px;
+    font-weight:800;
+    line-height:1.25;
+    white-space:normal;
+    overflow-wrap:break-word;
+">
+    {valor_formatado}
+</div>
         font-size:24px;
 font-weight:800;
 line-height:1.2;
